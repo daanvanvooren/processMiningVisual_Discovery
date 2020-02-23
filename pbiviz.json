@@ -1,1 +1,27 @@
-{"visual":{"name":"processMiningVisual","displayName":"ProcessMiningVisual","guid":"processMiningVisual7DE7E12823B044379D593D4DC57DE56B","visualClassName":"Visual","version":"1.0.0","description":"","supportUrl":"","gitHubUrl":""},"apiVersion":"2.6.0","author":{"name":"","email":""},"assets":{"icon":"assets/icon.png"},"externalJS":null,"style":"style/visual.less","capabilities":"capabilities.json","dependencies":null,"stringResources":[]}
+{
+    "visual": {
+        "name": "processMiningVisual",
+        "displayName": "ProcessMiningVisual",
+        "guid": "processMiningVisual7DE7E12823B044379D593D4DC57DE56B",
+        "visualClassName": "Visual",
+        "version": "1.0.0",
+        "description": "",
+        "supportUrl": "",
+        "gitHubUrl": ""
+    },
+    "apiVersion": "2.6.0",
+    "author": {
+        "name": "",
+        "email": ""
+    },
+    "assets": {
+        "icon": "assets/icon.png"
+    },
+    "externalJS": [
+        "node_modules/mermaid/mermaid.min.js"
+    ],
+    "style": "style/visual.less",
+    "capabilities": "capabilities.json",
+    "dependencies": null,
+    "stringResources": []
+}
