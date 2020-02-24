@@ -90,20 +90,65 @@ export class Visual implements IVisual {
             activityName: "Stap3",
             timestamp: new Date("2000-01-03")
         });
+
+        this.activities.push({
+            caseId: 2,
+            activityName: "Start",
+            timestamp: new Date("2000-01-01")
+        });
+        this.activities.push({
+            caseId: 2,
+            activityName: "Stap2",
+            timestamp: new Date("2000-01-02")
+        });
+        this.activities.push({
+            caseId: 2,
+            activityName: "Afwijkende_stap",
+            timestamp: new Date("2000-01-03")
+        });
+        this.activities.push({
+            caseId: 2,
+            activityName: "Einde",
+            timestamp: new Date("2000-01-04")
+        });
+    }
+
+    // Helper function to group all objects with a same property
+    private groupBy(arr, property) {
+        return arr.reduce(function (memo, x) {
+            if (!memo[x[property]]) { memo[x[property]] = []; }
+            memo[x[property]].push(x);
+            return memo;
+        }, {});
     }
 
     public constructGraphString(activities: Array<Activity>) {
-        var graphString: string = ""
+        // Group all activities with the same caseId
+        let activitiesGroupedByCaseId = this.groupBy(activities, 'caseId');
 
-        activities.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1)
+        // Construct an graphString for each case
+        let allGraphStrings = [];
+        for (const actGroup in activitiesGroupedByCaseId) {
+            let actGroupObj = activitiesGroupedByCaseId[actGroup]
+            actGroupObj.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1)
 
-        activities.forEach(act => {
-            graphString += (act.activityName + " --> ")
-        });
+            let graphString = actGroupObj.reduce((accumulator, act) => {
+                return accumulator + act.activityName + '-->'
+            }, '');
 
-        graphString = graphString.slice(0, -5)
+            graphString = graphString.slice(0, -3)
+            allGraphStrings.push(graphString);
+        }
 
-        return graphString;
+        // Remove double links
+
+        // Construct final graphString which includes every case
+        let finalGraphString = allGraphStrings.reduce((accumulator, gs) => {
+            return accumulator + gs + '\n'
+        }, '');
+
+        finalGraphString = finalGraphString.slice(0, -1)
+        return finalGraphString;
     }
 
     public plotActivities(target: HTMLElement, graphString: string) {
