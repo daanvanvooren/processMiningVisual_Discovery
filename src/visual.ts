@@ -48,73 +48,43 @@ export interface Activity {
 export class Visual implements IVisual {
     // Attributes
     private target: HTMLElement;
-    private settings: VisualSettings;
     private mermaidDiv: HTMLElement
     private activities: Array<Activity> = new Array();
 
-    // Constructor
     constructor(options: VisualConstructorOptions) {
         this.target = options.element;
-        this.fillActivities();
-        let graphString = this.constructGraphString(this.activities);
-
-        if (document) {
-            this.plotActivities(this.target, graphString);
-        }
     }
 
-    // Update
     public update(options: VisualUpdateOptions) {
+        // Clear canvas and loaded activities
+        this.target.innerHTML = ""; // TODO: think about a more performant way to do this
+        this.activities = [];
 
+        // Collect data from PowerBI
+        let dataViews = options.dataViews;
+        let table = dataViews[0].table
+
+        // Construct graphstring
+        this.fillActivities(table);
+        let graphString = this.constructGraphString(this.activities);
+
+        // Plot the graph
+        this.plotActivities(this.target, graphString);
     }
 
     // Functions
-    public fillActivities() {
-        this.activities.push({
-            caseId: 1,
-            activityName: "Start",
-            timestamp: new Date("2000-01-01")
-        });
-        this.activities.push({
-            caseId: 1,
-            activityName: "Stap2",
-            timestamp: new Date("2000-01-02")
-        });
-        this.activities.push({
-            caseId: 1,
-            activityName: "Einde",
-            timestamp: new Date("2000-01-04")
-        });
-        this.activities.push({
-            caseId: 1,
-            activityName: "Stap3",
-            timestamp: new Date("2000-01-03")
-        });
-
-        this.activities.push({
-            caseId: 2,
-            activityName: "Start",
-            timestamp: new Date("2000-01-01")
-        });
-        this.activities.push({
-            caseId: 2,
-            activityName: "Stap2",
-            timestamp: new Date("2000-01-02")
-        });
-        this.activities.push({
-            caseId: 2,
-            activityName: "Afwijkende_stap",
-            timestamp: new Date("2000-01-03")
-        });
-        this.activities.push({
-            caseId: 2,
-            activityName: "Einde",
-            timestamp: new Date("2000-01-04")
+    public fillActivities(table: powerbi.DataViewTable) {
+        table.rows.forEach(row => {
+            this.activities.push({
+                caseId: +row[1],
+                activityName: row[0].toString(),
+                timestamp: new Date(row[2].toString())
+            });
         });
     }
 
-    // Helper function to group all objects with a same property
     private groupBy(arr, property) {
+        // Helper function to group all objects with a same property
         return arr.reduce(function (memo, x) {
             if (!memo[x[property]]) { memo[x[property]] = []; }
             memo[x[property]].push(x);
@@ -126,7 +96,7 @@ export class Visual implements IVisual {
         // Group all activities with the same caseId
         let activitiesGroupedByCaseId = this.groupBy(activities, 'caseId');
 
-        // Construct an graphString for each case
+        // Construct a graphString for each case
         let allGraphStrings = [];
         for (const actGroup in activitiesGroupedByCaseId) {
             let actGroupObj = activitiesGroupedByCaseId[actGroup]
@@ -165,7 +135,6 @@ export class Visual implements IVisual {
         // Ask API to plot our graphString as SVG
         const element: any = this.mermaidDiv;
         const graphDefinition = "graph TB\n" + graphString;
-        console.log(graphDefinition)
         mermaid.render("graphDiv", graphDefinition, (svgCode, bindFunctions) => {
             element.innerHTML = svgCode;
         });
