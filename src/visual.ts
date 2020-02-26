@@ -111,14 +111,30 @@ export class Visual implements IVisual {
         }
 
         // Remove double links
+        let finalGraphString = allGraphStrings[0];
+        allGraphStrings.forEach(gs => {
+            let newGs = ""
+            let acts = gs.split("-->");
 
-        // Construct final graphString which includes every case
-        let finalGraphString = allGraphStrings.reduce((accumulator, gs) => {
-            return accumulator + gs + '\n'
-        }, '');
+            for (let i = 0; i < acts.length - 1; i++) {
+                if (!finalGraphString.includes(acts[i] + "-->" + acts[i + 1]))
+                    newGs += (acts[i] + "-->" + acts[i + 1] + "-->")
+            }
 
-        finalGraphString = finalGraphString.slice(0, -1)
-        return finalGraphString;
+            let actsNieuw = newGs.slice(0, -3).split("-->");
+            actsNieuw = [...new Set(actsNieuw)]
+            newGs = actsNieuw.reduce((accumulator, actt) => {
+                return accumulator + actt + '-->'
+            }, '');
+
+            finalGraphString += (newGs.slice(0, -3) + '\n')
+        });
+
+        // Replace happy path with big arrows
+        finalGraphString = finalGraphString.replace(allGraphStrings[0], allGraphStrings[0].split("-->").join("==>"));
+
+        //Return final graphString
+        return finalGraphString.slice(0, -1);
     }
 
     public plotActivities(target: HTMLElement, graphString: string) {

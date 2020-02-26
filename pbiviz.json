@@ -1,18 +1,18 @@
 {
     "visual": {
         "name": "processMiningVisual",
-        "displayName": "ProcessMiningVisual",
+        "displayName": "Proces Mining Visual v1.0",
         "guid": "processMiningVisual7DE7E12823B044379D593D4DC57DE56B",
         "visualClassName": "Visual",
         "version": "1.0.0",
-        "description": "",
-        "supportUrl": "",
+        "description": "Custom Process Mining Visual for delaware (bachelor thesis)",
+        "supportUrl": "https://github.com/daanvanvooren/processMiningVisual",
         "gitHubUrl": ""
     },
     "apiVersion": "2.6.0",
     "author": {
-        "name": "",
-        "email": ""
+        "name": "Daan Van Vooren",
+        "email": "daanvanvooren@gmail.com"
     },
     "assets": {
         "icon": "assets/icon.png"
