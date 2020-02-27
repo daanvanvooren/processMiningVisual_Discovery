@@ -97,41 +97,16 @@ export class Visual implements IVisual {
         let activitiesGroupedByCaseId = this.groupBy(activities, 'caseId');
 
         // Construct a graphString for each case
-        let allGraphStrings = [];
+        let couples = [];
         for (const actGroup in activitiesGroupedByCaseId) {
             let actGroupObj = activitiesGroupedByCaseId[actGroup]
             actGroupObj.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1)
-
-            let graphString = actGroupObj.reduce((accumulator, act) => {
-                return accumulator + act.activityName + '-->'
-            }, '');
-
-            graphString = graphString.slice(0, -3)
-            allGraphStrings.push(graphString);
+            for (let i = 0; i < actGroupObj.length - 1; i++) 
+                couples.push(actGroupObj[i].activityName + "-->" + actGroupObj[i + 1].activityName)
         }
-
-        // Remove double links
-        let finalGraphString = allGraphStrings[0];
-        allGraphStrings.forEach(gs => {
-            let newGs = ""
-            let acts = gs.split("-->");
-
-            for (let i = 0; i < acts.length - 1; i++) {
-                if (!finalGraphString.includes(acts[i] + "-->" + acts[i + 1]))
-                    newGs += (acts[i] + "-->" + acts[i + 1] + "-->")
-            }
-
-            let actsNieuw = newGs.slice(0, -3).split("-->");
-            actsNieuw = [...new Set(actsNieuw)]
-            newGs = actsNieuw.reduce((accumulator, actt) => {
-                return accumulator + actt + '-->'
-            }, '');
-
-            finalGraphString += (newGs.slice(0, -3) + '\n')
-        });
-
-        // Replace happy path with big arrows
-        finalGraphString = finalGraphString.replace(allGraphStrings[0], allGraphStrings[0].split("-->").join("==>"));
+        let finalGraphString = [...new Set(couples)].reduce((accumulator, actt) => {
+            return accumulator + actt + '\n'
+        }, '');
 
         //Return final graphString
         return finalGraphString.slice(0, -1);
