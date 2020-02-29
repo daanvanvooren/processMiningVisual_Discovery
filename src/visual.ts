@@ -31,103 +31,167 @@ import powerbi from "powerbi-visuals-api";
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
-import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
-import VisualObjectInstance = powerbi.VisualObjectInstance;
-import DataView = powerbi.DataView;
-import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
-import * as mermaid from "mermaid";
-import { VisualSettings } from "./settings";
 
-// Process Activity
-export interface Activity {
+import * as dagreD3 from "dagre-d3";
+import * as d3 from "d3";
+type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
+
+// Object created when an event occurs (row in data set)
+export interface ActivityEvent {
     caseId: number;
-    activityName: string;
-    timestamp: Date;
+    from: string;
+    to: string;
+}
+
+// Object per case with full path
+export interface Case {
+    caseId: number;
+    pathSorted: string;
 }
 
 export class Visual implements IVisual {
-    // Attributes
-    private target: HTMLElement;
-    private mermaidDiv: HTMLElement
-    private activities: Array<Activity> = new Array();
+    private svg: Selection<SVGElement>;
+    private activityEvents: Array<ActivityEvent> = new Array();
+    private cases: Array<Case> = new Array();
+    private sortedCaseIdsPerPath: Array<any> = new Array();
 
     constructor(options: VisualConstructorOptions) {
-        this.target = options.element;
+        this.svg = d3.select(options.element).append('svg');
     }
 
     public update(options: VisualUpdateOptions) {
-        // Clear canvas and loaded activities
-        this.target.innerHTML = ""; // TODO: think about a more performant way to do this
-        this.activities = [];
+        // Empty arrays
+        this.activityEvents = [];
+        this.cases = [];
+        this.sortedCaseIdsPerPath = [];
 
         // Collect data from PowerBI
-        let dataViews = options.dataViews;
-        let table = dataViews[0].table
+        let table = options.dataViews[0].table;
 
-        // Construct graphstring
-        this.fillActivities(table);
-        let graphString = this.constructGraphString(this.activities);
+        // Fill ActivityEvents
+        this.fillActivityEvents(table)
 
-        // Plot the graph
-        this.plotActivities(this.target, graphString);
+        // Sort ActivityEvents
+        this.sortActivityEvents();
+
+        // Plot graph
+        this.plotActivities(table, options);
     }
 
-    // Functions
-    public fillActivities(table: powerbi.DataViewTable) {
+    public fillActivityEvents(table: powerbi.DataViewTable) {
         table.rows.forEach(row => {
-            this.activities.push({
-                caseId: +row[1],
-                activityName: row[0].toString(),
-                timestamp: new Date(row[2].toString())
+            this.activityEvents.push({
+                caseId: +row[0],
+                from: row[1].toString(),
+                to: row[2].toString()
             });
         });
     }
 
+    public sortActivityEvents() {
+        // Group all activitiy events with the same caseId
+        let activityEventsGroupedByCaseId = this.groupBy(this.activityEvents, 'caseId');
+
+        // Make cases so we can count them later
+        for (const caseObjKey in activityEventsGroupedByCaseId) {
+            let caseObj = activityEventsGroupedByCaseId[caseObjKey]
+            let pathSortedArray = [];
+            let pathSortedString = "";
+
+            caseObj.forEach(f => {
+                pathSortedArray.push(f.from + "#sep1#" + f.to);
+            });
+
+            pathSortedString = pathSortedArray.sort().reduce((accumulator, path) => {
+                return accumulator + path + "#sep2#"
+            }, '');
+
+            this.cases.push({
+                caseId: caseObj[0].caseId,
+                pathSorted: pathSortedString
+            });
+        }
+
+        // Per distinct path we have all the caseIds which have the same path
+        let casesGroupedByPath = this.groupBy(this.cases, 'pathSorted');
+
+        // Make an 2d array with all caseIds
+        let caseIdArray = []
+        for (const caseObjKey in casesGroupedByPath) {
+            let caseObj = casesGroupedByPath[caseObjKey]
+            let tempArray = []
+            caseObj.forEach(c => {
+                tempArray.push(c.caseId)
+            });
+            caseIdArray.push(tempArray);
+        }
+
+        caseIdArray.sort(function (a, b) {
+            return b.length - a.length;
+        });
+
+        this.sortedCaseIdsPerPath = caseIdArray;
+    }
+
+    public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
+        let showAmountOfFlows = 1;
+        let caseIdsToShow = [];
+
+        for (let i = 0; i < showAmountOfFlows; i++) {
+            caseIdsToShow.push(this.sortedCaseIdsPerPath[i]);
+        }
+        caseIdsToShow = caseIdsToShow.reduce((acc, val) => acc.concat(val), []);
+
+        let allActivites = [];
+        table.rows.forEach(row => {
+            // if (caseIdsToShow.indexOf(+row[0]) != -1) {
+            allActivites.push(row[1].toString())
+            allActivites.push(row[2].toString())
+            // }
+        });
+        allActivites = [...new Set(allActivites)];
+
+        // Create input graph
+        var g = new dagreD3.graphlib.Graph()
+            .setGraph({})
+            .setDefaultEdgeLabel(function () { return {}; });
+
+        for (let i = 0; i < allActivites.length; i++) {
+            g.setNode(allActivites[i], { label: allActivites[i] });
+        }
+
+        table.rows.forEach(row => {
+            // if (caseIdsToShow.indexOf(+row[0]) != -1)
+            g.setEdge(row[1].toString(), row[2].toString());
+        });
+
+        // Create the renderer
+        var render = new dagreD3.render();
+
+        // Set up an SVG group so that we can translate the final graph
+        var svg = d3.select("svg"),
+            inner = svg.append("g");
+
+        // Set up zoom support
+        let width: number = options.viewport.width;
+        let height: number = options.viewport.height;
+        this.svg.attr("width", width);
+        this.svg.attr("height", height);
+
+        var zoom = d3.zoom().on("zoom", function () {
+            inner.attr("transform", d3.event.transform);
+        });
+        svg.call(zoom);
+
+        // Draws final graph
+        render(d3.select("svg g"), g);
+    }
+
     private groupBy(arr, property) {
-        // Helper function to group all objects with a same property
         return arr.reduce(function (memo, x) {
             if (!memo[x[property]]) { memo[x[property]] = []; }
             memo[x[property]].push(x);
             return memo;
         }, {});
-    }
-
-    public constructGraphString(activities: Array<Activity>) {
-        // Group all activities with the same caseId
-        let activitiesGroupedByCaseId = this.groupBy(activities, 'caseId');
-
-        // Construct a graphString for each case
-        let couples = [];
-        for (const actGroup in activitiesGroupedByCaseId) {
-            let actGroupObj = activitiesGroupedByCaseId[actGroup]
-            actGroupObj.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1)
-            for (let i = 0; i < actGroupObj.length - 1; i++) 
-                couples.push(actGroupObj[i].activityName + "-->" + actGroupObj[i + 1].activityName)
-        }
-        let finalGraphString = [...new Set(couples)].reduce((accumulator, actt) => {
-            return accumulator + actt + '\n'
-        }, '');
-
-        //Return final graphString
-        return finalGraphString.slice(0, -1);
-    }
-
-    public plotActivities(target: HTMLElement, graphString: string) {
-        // Make mermaid div
-        this.mermaidDiv = document.createElement("div")
-        this.mermaidDiv.classList.add("graphDiv");
-        target.appendChild(this.mermaidDiv);
-
-        // Run mermaid script
-        mermaid.mermaidAPI.initialize({
-            startOnLoad: false
-        });
-
-        // Ask API to plot our graphString as SVG
-        const element: any = this.mermaidDiv;
-        const graphDefinition = "graph TB\n" + graphString;
-        mermaid.render("graphDiv", graphDefinition, (svgCode, bindFunctions) => {
-            element.innerHTML = svgCode;
-        });
     }
 }

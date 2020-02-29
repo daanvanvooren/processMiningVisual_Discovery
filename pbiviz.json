@@ -1,8 +1,8 @@
 {
     "visual": {
         "name": "processMiningVisual",
-        "displayName": "Proces Mining Visual v1.0",
-        "guid": "processMiningVisual7DE7E12823B044379D593D4DC57DE56B",
+        "displayName": "Proces Mining Visual v1.1",
+        "guid": "processMiningVisual9DE3A2D527434083879779F905A6E9AE",
         "visualClassName": "Visual",
         "version": "1.0.0",
         "description": "Custom Process Mining Visual for delaware (bachelor thesis)",
@@ -11,14 +11,14 @@
     },
     "apiVersion": "2.6.0",
     "author": {
-        "name": "Daan Van Vooren",
-        "email": "daanvanvooren@gmail.com"
+        "name": "",
+        "email": ""
     },
     "assets": {
         "icon": "assets/icon.png"
     },
     "externalJS": [
-        "node_modules/mermaid/mermaid.min.js"
+        "node_modules/dagre-d3/dagre-d3.min.js"
     ],
     "style": "style/visual.less",
     "capabilities": "capabilities.json",

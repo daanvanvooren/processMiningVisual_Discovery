@@ -12,6 +12,11 @@
                 "rows": {
                     "for": {
                         "in": "values"
+                    },
+                    "dataReductionAlgorithm": {
+                        "top": {
+                            "count": 30000
+                        }
                     }
                 }
             }
