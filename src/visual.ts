@@ -50,13 +50,26 @@ export interface Case {
 }
 
 export class Visual implements IVisual {
-    private svg: Selection<SVGElement>;
+    private svgContainer: Selection<SVGElement>;
     private activityEvents: Array<ActivityEvent> = new Array();
     private cases: Array<Case> = new Array();
     private sortedCaseIdsPerPath: Array<any> = new Array();
 
+    private svg: d3.Selection<d3.BaseType, unknown, HTMLElement, any>
+    private zoom: d3.ZoomBehavior<Element, unknown>;
+
+
     constructor(options: VisualConstructorOptions) {
-        this.svg = d3.select(options.element).append('svg');
+        this.svgContainer = d3.select(options.element).append('svg');
+
+        this.svg = d3.select('svg');
+        let inner = this.svg.append('g');
+
+        this.zoom = d3.zoom().on('zoom', function () {
+            inner.attr('transform', d3.event.transform);
+        });
+
+        this.svg.call(this.zoom);
     }
 
     public update(options: VisualUpdateOptions) {
@@ -134,19 +147,19 @@ export class Visual implements IVisual {
     }
 
     public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
-        let showAmountOfFlows = 1;
-        let caseIdsToShow = [];
+        // let showAmountOfFlows = 2;
+        // let caseIdsToShow = [];
 
-        for (let i = 0; i < showAmountOfFlows; i++) {
-            caseIdsToShow.push(this.sortedCaseIdsPerPath[i]);
-        }
-        caseIdsToShow = caseIdsToShow.reduce((acc, val) => acc.concat(val), []);
+        // for (let i = 0; i < showAmountOfFlows; i++) {
+        //     caseIdsToShow.push(this.sortedCaseIdsPerPath[i]);
+        // }
+        // caseIdsToShow = caseIdsToShow.reduce((acc, val) => acc.concat(val), []);
 
         let allActivites = [];
         table.rows.forEach(row => {
             // if (caseIdsToShow.indexOf(+row[0]) != -1) {
-            allActivites.push(row[1].toString())
-            allActivites.push(row[2].toString())
+                allActivites.push(row[1].toString())
+                allActivites.push(row[2].toString())
             // }
         });
         allActivites = [...new Set(allActivites)];
@@ -160,31 +173,50 @@ export class Visual implements IVisual {
             g.setNode(allActivites[i], { label: allActivites[i] });
         }
 
+        // Construct all paths
+        let freq = {};
         table.rows.forEach(row => {
-            // if (caseIdsToShow.indexOf(+row[0]) != -1)
-            g.setEdge(row[1].toString(), row[2].toString());
+            // if (caseIdsToShow.indexOf(+row[0]) != -1) {
+                let string = row[1].toString() + "#sep#" + row[2].toString();
+                freq[string] = freq[string] ? freq[string] + 1 : 1
+                g.setEdge(row[1].toString(), row[2].toString(), {
+                    style: "stroke: #262626; stroke-dasharray: 7, 5;",
+                    arrowheadStyle: "fill: #262626;",
+                    label: freq[string],
+                    labelStyle: "fill: black; color: black",
+                    curve: d3.curveBasis
+                });
+            // }
         });
 
-        // Create the renderer
+        // Make happy path a different style
+        table.rows.forEach(row => {
+            if (this.sortedCaseIdsPerPath[0].indexOf(+row[0]) != -1) {
+                let string = row[1].toString() + "#sep#" + row[2].toString();
+                g.setEdge(row[1].toString(), row[2].toString(), {
+                    style: "stroke: black; stroke-width: 2.5px;",
+                    arrowheadStyle: "fill: black;",
+                    label: freq[string],
+                    labelStyle: "fill: black; color: black;",
+                    curve: d3.curveBasis
+                });
+            }
+        });
+
+        // Create renderer
         var render = new dagreD3.render();
 
-        // Set up an SVG group so that we can translate the final graph
-        var svg = d3.select("svg"),
-            inner = svg.append("g");
-
-        // Set up zoom support
-        let width: number = options.viewport.width;
-        let height: number = options.viewport.height;
-        this.svg.attr("width", width);
-        this.svg.attr("height", height);
-
-        var zoom = d3.zoom().on("zoom", function () {
-            inner.attr("transform", d3.event.transform);
-        });
-        svg.call(zoom);
-
-        // Draws final graph
+        // Draw final graph
         render(d3.select("svg g"), g);
+
+        // Change viewport dimensions and  center the graph
+        this.svgContainer.attr("width", options.viewport.width);
+
+        var initialScale = 0.75;
+        this.svg.call(this.zoom.transform, d3.zoomIdentity.translate((+this.svg.attr("width") - g.graph().width * initialScale) / 2, 20).scale(initialScale));
+        this.svg.attr('height', g.graph().height * initialScale + 40);
+
+        this.svgContainer.attr("height", options.viewport.height);
     }
 
     private groupBy(arr, property) {
