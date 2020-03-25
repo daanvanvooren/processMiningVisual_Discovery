@@ -36,28 +36,21 @@ import * as dagreD3 from "dagre-d3";
 import * as d3 from "d3";
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
-// Object created when an event occurs (row in data set)
-export interface ActivityEvent {
-    caseId: number;
+export interface Relationship {
+    key: string;
     from: string;
     to: string;
-}
-
-// Object per case with full path
-export interface Case {
-    caseId: number;
-    pathSorted: string;
+    amount: number;
+    isHappyPath: boolean;
+    caseIds: Array<number>;
 }
 
 export class Visual implements IVisual {
     private svgContainer: Selection<SVGElement>;
-    private activityEvents: Array<ActivityEvent> = new Array();
-    private cases: Array<Case> = new Array();
-    private sortedCaseIdsPerPath: Array<any> = new Array();
-
     private svg: d3.Selection<d3.BaseType, unknown, HTMLElement, any>
     private zoom: d3.ZoomBehavior<Element, unknown>;
 
+    private relationships: Map<string, Relationship> = new Map();
 
     constructor(options: VisualConstructorOptions) {
         this.svgContainer = d3.select(options.element).append('svg');
@@ -73,96 +66,67 @@ export class Visual implements IVisual {
     }
 
     public update(options: VisualUpdateOptions) {
-        // Empty arrays
-        this.activityEvents = [];
-        this.cases = [];
-        this.sortedCaseIdsPerPath = [];
+        // Empty relationships
+        this.relationships.clear();
 
         // Collect data from PowerBI
         let table = options.dataViews[0].table;
 
-        // Fill ActivityEvents
-        this.fillActivityEvents(table)
-
-        // Sort ActivityEvents
-        this.sortActivityEvents();
-
-        // Plot graph
-        this.plotActivities(table, options);
+        this.fillRelationships(table)
+        this.plotActivities(table, options)
     }
 
-    public fillActivityEvents(table: powerbi.DataViewTable) {
+    public fillRelationships(table: powerbi.DataViewTable) {
+        let caseId, from, to, ihp;
+        let happyPath = [];
         table.rows.forEach(row => {
-            this.activityEvents.push({
-                caseId: +row[0],
-                from: row[1].toString(),
-                to: row[2].toString()
-            });
+            caseId = +row[0];
+            from = row[1].toString();
+            to = row[2].toString()
+            ihp = (row[3].toString() === 'true')
+            let key = from + "->" + to;
+            if (ihp) {
+                happyPath.push(key);
+            }
+            if (!this.relationships.has(key)) {
+                this.relationships.set(key, <Relationship>{
+                    key: key,
+                    from: from,
+                    to: to,
+                    amount: 1,
+                    isHappyPath: false,
+                    caseIds: [caseId]
+                });
+            } else {
+                let rel = this.relationships.get(key);
+                rel.amount++;
+                rel.caseIds.push(caseId);
+            }
+        });
+        happyPath.forEach(key => {
+            this.relationships.get(key).isHappyPath = true;
         });
     }
 
-    public sortActivityEvents() {
-        // Group all activitiy events with the same caseId
-        let activityEventsGroupedByCaseId = this.groupBy(this.activityEvents, 'caseId');
-
-        // Make cases so we can count them later
-        for (const caseObjKey in activityEventsGroupedByCaseId) {
-            let caseObj = activityEventsGroupedByCaseId[caseObjKey]
-            let pathSortedArray = [];
-            let pathSortedString = "";
-
-            caseObj.forEach(f => {
-                pathSortedArray.push(f.from + "#sep1#" + f.to);
-            });
-
-            pathSortedString = pathSortedArray.sort().reduce((accumulator, path) => {
-                return accumulator + path + "#sep2#"
-            }, '');
-
-            this.cases.push({
-                caseId: caseObj[0].caseId,
-                pathSorted: pathSortedString
-            });
-        }
-
-        // Per distinct path we have all the caseIds which have the same path
-        let casesGroupedByPath = this.groupBy(this.cases, 'pathSorted');
-
-        // Make an 2d array with all caseIds
-        let caseIdArray = []
-        for (const caseObjKey in casesGroupedByPath) {
-            let caseObj = casesGroupedByPath[caseObjKey]
-            let tempArray = []
-            caseObj.forEach(c => {
-                tempArray.push(c.caseId)
-            });
-            caseIdArray.push(tempArray);
-        }
-
-        caseIdArray.sort(function (a, b) {
-            return b.length - a.length;
-        });
-
-        this.sortedCaseIdsPerPath = caseIdArray;
+    public makeNode(text: string, subTekst: string) {
+        var html = "<div class=node>";
+        html += "<div class=main>" + text + "</div>";
+        html += "<div class=sub>" + subTekst + "</div>";
+        html += "</div>";
+        return html;
     }
 
     public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
-        // let showAmountOfFlows = 2;
-        // let caseIdsToShow = [];
-
-        // for (let i = 0; i < showAmountOfFlows; i++) {
-        //     caseIdsToShow.push(this.sortedCaseIdsPerPath[i]);
-        // }
-        // caseIdsToShow = caseIdsToShow.reduce((acc, val) => acc.concat(val), []);
-
+        let caseIds = [];
         let allActivites = [];
+
         table.rows.forEach(row => {
-            // if (caseIdsToShow.indexOf(+row[0]) != -1) {
-                allActivites.push(row[1].toString())
-                allActivites.push(row[2].toString())
-            // }
+            allActivites.push(row[1].toString());
+            allActivites.push(row[2].toString());
+            caseIds.push(+row[0]);
         });
         allActivites = [...new Set(allActivites)];
+        caseIds = [...new Set(caseIds)];
 
         // Create input graph
         var g = new dagreD3.graphlib.Graph()
@@ -170,37 +134,24 @@ export class Visual implements IVisual {
             .setDefaultEdgeLabel(function () { return {}; });
 
         for (let i = 0; i < allActivites.length; i++) {
-            g.setNode(allActivites[i], { label: allActivites[i] });
+            g.setNode(allActivites[i], {
+                labelType: "html",
+                label: this.makeNode(allActivites[i], "Extra info"),
+                rx: 5,
+                ry: 5,
+                padding: 0
+            });
         }
 
-        // Construct all paths
-        let freq = {};
-        table.rows.forEach(row => {
-            // if (caseIdsToShow.indexOf(+row[0]) != -1) {
-                let string = row[1].toString() + "#sep#" + row[2].toString();
-                freq[string] = freq[string] ? freq[string] + 1 : 1
-                g.setEdge(row[1].toString(), row[2].toString(), {
-                    style: "stroke: #262626; stroke-dasharray: 7, 5;",
-                    arrowheadStyle: "fill: #262626;",
-                    label: freq[string],
-                    labelStyle: "fill: black; color: black",
-                    curve: d3.curveBasis
-                });
-            // }
-        });
-
-        // Make happy path a different style
-        table.rows.forEach(row => {
-            if (this.sortedCaseIdsPerPath[0].indexOf(+row[0]) != -1) {
-                let string = row[1].toString() + "#sep#" + row[2].toString();
-                g.setEdge(row[1].toString(), row[2].toString(), {
-                    style: "stroke: black; stroke-width: 2.5px;",
-                    arrowheadStyle: "fill: black;",
-                    label: freq[string],
-                    labelStyle: "fill: black; color: black;",
-                    curve: d3.curveBasis
-                });
-            }
+        // Plot graph
+        this.relationships.forEach(rel => {
+            g.setEdge(rel.from, rel.to, {
+                style: rel.isHappyPath ? "stroke: black; stroke-width: 2.5px;" : "stroke: #262626; stroke-dasharray: 7, 5;",
+                arrowheadStyle: rel.isHappyPath ? "fill: black;" : "fill: #262626;",
+                label: `${Math.round(rel.amount / caseIds.length * 1000) / 10}% (${rel.amount}/${caseIds.length})`,
+                labelStyle: "fill: black; color: black;",
+                curve: d3.curveBasis
+            });
         });
 
         // Create renderer
@@ -217,13 +168,5 @@ export class Visual implements IVisual {
         this.svg.attr('height', g.graph().height * initialScale + 40);
 
         this.svgContainer.attr("height", options.viewport.height);
-    }
-
-    private groupBy(arr, property) {
-        return arr.reduce(function (memo, x) {
-            if (!memo[x[property]]) { memo[x[property]] = []; }
-            memo[x[property]].push(x);
-            return memo;
-        }, {});
     }
 }
