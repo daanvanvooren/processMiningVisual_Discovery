@@ -32,6 +32,10 @@ import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructor
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 
+import { VisualSettings } from "./settings";
+import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
+import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
+
 import * as dagreD3 from "dagre-d3";
 import * as d3 from "d3";
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
@@ -50,6 +54,10 @@ export class Visual implements IVisual {
     private svg: d3.Selection<d3.BaseType, unknown, HTMLElement, any>
     private zoom: d3.ZoomBehavior<Element, unknown>;
 
+    private visualSettings: VisualSettings;
+    private showHappyPath: boolean = false;
+    private happyPathString: string = "";
+
     private relationships: Map<string, Relationship> = new Map();
 
     constructor(options: VisualConstructorOptions) {
@@ -65,7 +73,18 @@ export class Visual implements IVisual {
         this.svg.call(this.zoom);
     }
 
+    // Settings voor custom happy path
+    public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+        const settings: VisualSettings = this.visualSettings || <VisualSettings>VisualSettings.getDefault();
+        return VisualSettings.enumerateObjectInstances(settings, options);
+    }
+
     public update(options: VisualUpdateOptions) {
+        // Settings
+        this.visualSettings = VisualSettings.parse<VisualSettings>(options.dataViews[0]);
+        this.showHappyPath = this.visualSettings.happyPath.showHappyPath;
+        this.happyPathString = this.visualSettings.happyPath.happyPathString;
+
         // Empty relationships
         this.relationships.clear();
 
@@ -108,13 +127,13 @@ export class Visual implements IVisual {
         });
     }
 
-    public makeNode(text: string, subTekst: string) {
-        var html = "<div class=node>";
-        html += "<div class=main>" + text + "</div>";
-        html += "<div class=sub>" + subTekst + "</div>";
-        html += "</div>";
-        return html;
-    }
+    // public makeNode(text: string, subTekst: string) {
+    //     var html = "<div class=node>";
+    //     html += "<div class=main>" + text + "</div>";
+    //     html += "<div class=sub>" + subTekst + "</div>";
+    //     html += "</div>";
+    //     return html;
+    // }
 
     public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
         let caseIds = [];
@@ -134,13 +153,10 @@ export class Visual implements IVisual {
             .setDefaultEdgeLabel(function () { return {}; });
 
         for (let i = 0; i < allActivites.length; i++) {
-            g.setNode(allActivites[i], {
-                labelType: "html",
-                label: this.makeNode(allActivites[i], "Extra info"),
-                rx: 5,
-                ry: 5,
-                padding: 0
-            });
+            if (this.showHappyPath)
+                g.setNode(allActivites[i], { label: `(${i}) ${allActivites[i]}` });
+            else
+                g.setNode(allActivites[i], { label: `${allActivites[i]}` });
         }
 
         // Plot graph

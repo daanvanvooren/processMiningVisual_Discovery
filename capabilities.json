@@ -6,6 +6,27 @@
             "displayName": "Values"
         }
     ],
+    "objects": {
+        "happyPath": {
+            "displayName": "Happy Path",
+            "properties": {
+                "showHappyPath": {
+                    "displayName": "Custom Happy Path",
+                    "description": "Enable Custom Happy Path",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "happyPathString": {
+                    "displayName": "Path",
+                    "description": "Use the acitivity numbers in combination of an arrow ->",
+                    "type": {
+                        "text": true
+                    }
+                }
+            }
+        }
+    },
     "dataViewMappings": [
         {
             "table": {
