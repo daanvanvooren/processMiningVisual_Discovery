@@ -1,39 +1,63 @@
 {
     "dataRoles": [
         {
-            "name": "values",
+            "name": "id",
             "kind": "GroupingOrMeasure",
-            "displayName": "Values"
+            "displayName": "ID"
+        },
+        {
+            "name": "caseId",
+            "kind": "GroupingOrMeasure",
+            "displayName": "CaseID"
+        },
+        {
+            "name": "fromActivity",
+            "kind": "GroupingOrMeasure",
+            "displayName": "From Activity"
+        },
+        {
+            "name": "toActivity",
+            "kind": "GroupingOrMeasure",
+            "displayName": "To Activity"
+        },
+        {
+            "name": "isHappyPath",
+            "kind": "GroupingOrMeasure",
+            "displayName": "Is Happy Path"
         }
     ],
-    "objects": {
-        "happyPath": {
-            "displayName": "Happy Path",
-            "properties": {
-                "showHappyPath": {
-                    "displayName": "Custom Happy Path",
-                    "description": "Enable Custom Happy Path",
-                    "type": {
-                        "bool": true
-                    }
-                },
-                "happyPathString": {
-                    "displayName": "Path",
-                    "description": "Use the acitivity numbers in combination of an arrow ->",
-                    "type": {
-                        "text": true
-                    }
-                }
-            }
-        }
-    },
+    "objects": {},
     "dataViewMappings": [
         {
             "table": {
                 "rows": {
-                    "for": {
-                        "in": "values"
-                    },
+                    "select": [
+                        {
+                            "for": {
+                                "in": "id"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "caseId"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "fromActivity"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "toActivity"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "isHappyPath"
+                            }
+                        }
+                    ],
                     "dataReductionAlgorithm": {
                         "top": {
                             "count": 30000

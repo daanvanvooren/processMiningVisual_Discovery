@@ -29,11 +29,5 @@
 import { dataViewObjectsParser } from "powerbi-visuals-utils-dataviewutils";
 import DataViewObjectsParser = dataViewObjectsParser.DataViewObjectsParser;
 
-export class HappyPathSettings {
-  public showHappyPath: boolean = false;
-  public happyPathString: string = "";
-}
-
 export class VisualSettings extends DataViewObjectsParser {
-  public happyPath: HappyPathSettings = new HappyPathSettings();
 }
