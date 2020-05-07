@@ -108,14 +108,6 @@ export class Visual implements IVisual {
         });
     }
 
-    // public makeNode(text: string, subTekst: string) {
-    //     var html = "<div class=node>";
-    //     html += "<div class=main>" + text + "</div>";
-    //     html += "<div class=sub>" + subTekst + "</div>";
-    //     html += "</div>";
-    //     return html;
-    // }
-
     public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
         let caseIds = [];
         let allActivites = [];
