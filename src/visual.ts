@@ -32,6 +32,12 @@ import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructor
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 
+// Settings visual
+import { VisualSettings } from "./settings";
+import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
+import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
+
+// D3
 import * as dagreD3 from "dagre-d3";
 import * as d3 from "d3";
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
@@ -43,12 +49,17 @@ export interface Relationship {
     amount: number;
     isHappyPath: boolean;
     caseIds: Array<number>;
+    durations: Array<number>;
 }
 
 export class Visual implements IVisual {
     private svgContainer: Selection<SVGElement>;
     private svg: d3.Selection<d3.BaseType, unknown, HTMLElement, any>
     private zoom: d3.ZoomBehavior<Element, unknown>;
+
+    // Settings visual
+    private visualSettings: VisualSettings;
+    private relationShipPercentageThreshold: number = 0;
 
     private relationships: Map<string, Relationship> = new Map();
 
@@ -65,25 +76,36 @@ export class Visual implements IVisual {
         this.svg.call(this.zoom);
     }
 
+    // Settings voor custom happy path
+    public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+        const settings: VisualSettings = this.visualSettings || <VisualSettings>VisualSettings.getDefault();
+        return VisualSettings.enumerateObjectInstances(settings, options);
+    }
+
     public update(options: VisualUpdateOptions) {
+        // Settings visual
+        this.visualSettings = VisualSettings.parse<VisualSettings>(options.dataViews[0]);
+        this.relationShipPercentageThreshold = this.visualSettings.graphSettings.relationShipPercentageThreshold;
+
         // Empty relationships
         this.relationships.clear();
 
         // Collect data from PowerBI
         let table = options.dataViews[0].table;
 
-        this.fillRelationships(table)
-        this.plotActivities(table, options)
+        this.fillRelationships(table);
+        this.plotActivities(table, options);
     }
 
     public fillRelationships(table: powerbi.DataViewTable) {
-        let caseId, from, to, ihp;
+        let caseId, from, to, ihp, duration;
         let happyPath = [];
         table.rows.forEach(row => {
             caseId = +row[1];
             from = row[2].toString();
-            to = row[3].toString()
-            ihp = (row[4].toString() === 'true')
+            to = row[3].toString();
+            ihp = (row[4].toString() === 'true');
+            duration = +row[5];
             let key = from + "->" + to;
             if (ihp) {
                 happyPath.push(key);
@@ -95,12 +117,14 @@ export class Visual implements IVisual {
                     to: to,
                     amount: 1,
                     isHappyPath: false,
-                    caseIds: [caseId]
+                    caseIds: [caseId],
+                    durations: [duration]
                 });
             } else {
                 let rel = this.relationships.get(key);
                 rel.amount++;
                 rel.caseIds.push(caseId);
+                rel.durations.push(duration);
             }
         });
         happyPath.forEach(key => {
@@ -111,6 +135,7 @@ export class Visual implements IVisual {
     public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
         let caseIds = [];
         let allActivites = [];
+        let allActivitesSeen = [];
 
         table.rows.forEach(row => {
             allActivites.push(row[2].toString());
@@ -125,20 +150,30 @@ export class Visual implements IVisual {
             .setGraph({})
             .setDefaultEdgeLabel(function () { return {}; });
 
-        for (let i = 0; i < allActivites.length; i++) {
-            g.setNode(allActivites[i], { label: `${allActivites[i]}` });
-        }
-
         // Plot graph
         this.relationships.forEach(rel => {
-            g.setEdge(rel.from, rel.to, {
-                style: rel.isHappyPath ? "stroke: black; stroke-width: 2.5px;" : "stroke: #262626; stroke-dasharray: 7, 5;",
-                arrowheadStyle: rel.isHappyPath ? "fill: black;" : "fill: #262626;",
-                label: `${Math.round(rel.amount / caseIds.length * 1000) / 10}% (${rel.amount}/${caseIds.length})`,
-                labelStyle: "fill: black; color: black;",
-                curve: d3.curveBasis
-            });
+            let percentageRel = Math.round(rel.amount / caseIds.length * 1000) / 10;
+
+            // To minimize noise we set a treshold for relationships which doesn't accur alot
+            if (percentageRel > this.relationShipPercentageThreshold) {
+                allActivitesSeen.push(rel.from);
+                allActivitesSeen.push(rel.to);
+
+                g.setEdge(rel.from, rel.to, {
+                    style: rel.isHappyPath ? "stroke: black; stroke-width: 3px;" : "stroke: #262626; stroke-dasharray: 7, 5;",
+                    arrowheadStyle: rel.isHappyPath ? "fill: black;" : "fill: #262626;",
+                    label: `${percentageRel}% (${rel.amount}/${caseIds.length}) AND mean duration = ${Math.round(this.calculateDurationStatistics(rel.durations))}`,
+                    labelStyle: "fill: black; color: black;",
+                    curve: d3.curveBasis
+                });
+            }
         });
+
+        // Set nodes which have been seen 
+        allActivitesSeen = [...new Set(allActivitesSeen)];
+        for (let i = 0; i < allActivitesSeen.length; i++) {
+            g.setNode(allActivitesSeen[i], { label: `${allActivitesSeen[i]}` });
+        }
 
         // Create renderer
         var render = new dagreD3.render();
@@ -154,5 +189,13 @@ export class Visual implements IVisual {
         this.svg.attr('height', g.graph().height * initialScale + 40);
 
         this.svgContainer.attr("height", options.viewport.height);
+    }
+
+    private calculateDurationStatistics(durations: Array<number>) {
+        var total = 0;
+        for (var i = 0; i < durations.length; i++) {
+            total += durations[i];
+        }
+        return total / durations.length;
     }
 }

@@ -29,5 +29,10 @@
 import { dataViewObjectsParser } from "powerbi-visuals-utils-dataviewutils";
 import DataViewObjectsParser = dataViewObjectsParser.DataViewObjectsParser;
 
-export class VisualSettings extends DataViewObjectsParser {
+export class GraphSettings {
+    public relationShipPercentageThreshold: number = 0;
 }
+
+export class VisualSettings extends DataViewObjectsParser {
+    public graphSettings: GraphSettings = new GraphSettings();
+} 

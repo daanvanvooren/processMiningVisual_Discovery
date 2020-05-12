@@ -24,9 +24,27 @@
             "name": "isHappyPath",
             "kind": "GroupingOrMeasure",
             "displayName": "Is Happy Path"
+        },
+        {
+            "name": "duration",
+            "kind": "GroupingOrMeasure",
+            "displayName": "Duration"
         }
     ],
-    "objects": {},
+    "objects": {
+        "graphSettings": {
+            "displayName": "Graphsettings",
+            "properties": {
+                "relationShipPercentageThreshold": {
+                    "displayName": "Relationship % threshold",
+                    "description": "The minimum occurrence percentage a relationship must have in order to be displayed",
+                    "type": {
+                        "numeric": true
+                    }
+                }
+            }
+        }
+    },
     "dataViewMappings": [
         {
             "table": {
@@ -55,6 +73,11 @@
                         {
                             "for": {
                                 "in": "isHappyPath"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "duration"
                             }
                         }
                     ],
