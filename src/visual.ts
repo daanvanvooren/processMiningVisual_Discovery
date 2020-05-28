@@ -50,6 +50,7 @@ export interface Relationship {
     isHappyPath: boolean;
     caseIds: Array<number>;
     durations: Array<number>;
+    isCustomHappyPath: boolean;
 }
 
 export class Visual implements IVisual {
@@ -98,14 +99,17 @@ export class Visual implements IVisual {
     }
 
     public fillRelationships(table: powerbi.DataViewTable) {
-        let caseId, from, to, ihp, duration;
+        let caseId, from, to, ihp, ichp, duration;
         let happyPath = [];
         table.rows.forEach(row => {
             caseId = +row[1];
             from = row[2].toString();
             to = row[3].toString();
-            ihp = (row[4].toString() === 'true');
+            ihp = (row[4].toString() === 'Yes');
             duration = +row[5];
+            if(row[6]) {
+                ichp = (row[6].toString() === 'Yes');
+            }
             let key = from + "->" + to;
             if (ihp) {
                 happyPath.push(key);
@@ -118,7 +122,8 @@ export class Visual implements IVisual {
                     amount: 1,
                     isHappyPath: false,
                     caseIds: [caseId],
-                    durations: [duration]
+                    durations: [duration],
+                    isCustomHappyPath: ichp
                 });
             } else {
                 let rel = this.relationships.get(key);
@@ -160,8 +165,8 @@ export class Visual implements IVisual {
                 allActivitesSeen.push(rel.to);
 
                 g.setEdge(rel.from, rel.to, {
-                    style: rel.isHappyPath ? "stroke: black; stroke-width: 3px;" : "stroke: #262626; stroke-dasharray: 7, 5;",
-                    arrowheadStyle: rel.isHappyPath ? "fill: black;" : "fill: #262626;",
+                    style: rel.isHappyPath || rel.isCustomHappyPath ? "stroke: black; stroke-width: 3px;" : "stroke: #262626; stroke-dasharray: 7, 5;",
+                    arrowheadStyle: rel.isHappyPath || rel.isCustomHappyPath  ? "fill: black;" : "fill: #262626;",
                     label: `${percentageRel}% (${rel.amount}/${caseIds.length}) AND mean duration = ${Math.round(this.calculateDurationStatistics(rel.durations))}`,
                     labelStyle: "fill: black; color: black;",
                     curve: d3.curveBasis
