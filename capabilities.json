@@ -29,11 +29,6 @@
             "name": "duration",
             "kind": "GroupingOrMeasure",
             "displayName": "Duration"
-        },
-        {
-            "name": "customHappyPaths",
-            "kind": "GroupingOrMeasure",
-            "displayName": "CustomHappyPaths"
         }
     ],
     "objects": {
@@ -83,11 +78,6 @@
                         {
                             "for": {
                                 "in": "duration"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "customHappyPaths"
                             }
                         }
                     ],
