@@ -94,7 +94,7 @@ export class Visual implements IVisual {
         let table = options.dataViews[0].table;
 
         this.fillRelationships(table);
-        this.plotActivities(table, options);
+        this.plotGraph(table, options);
     }
 
     public fillRelationships(table: powerbi.DataViewTable) {
@@ -132,7 +132,7 @@ export class Visual implements IVisual {
         });
     }
 
-    public plotActivities(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
+    public plotGraph(table: powerbi.DataViewTable, options: VisualUpdateOptions) {
         let caseIds = [];
         let allActivities = [];
 
