@@ -1,93 +1,93 @@
 {
-    "dataRoles": [
-        {
-            "name": "id",
-            "kind": "GroupingOrMeasure",
-            "displayName": "ID"
-        },
-        {
-            "name": "caseId",
-            "kind": "GroupingOrMeasure",
-            "displayName": "CaseID"
-        },
-        {
-            "name": "fromActivity",
-            "kind": "GroupingOrMeasure",
-            "displayName": "From Activity"
-        },
-        {
-            "name": "toActivity",
-            "kind": "GroupingOrMeasure",
-            "displayName": "To Activity"
-        },
-        {
-            "name": "isHappyPath",
-            "kind": "GroupingOrMeasure",
-            "displayName": "Is Happy Path"
-        },
-        {
-            "name": "duration",
-            "kind": "GroupingOrMeasure",
-            "displayName": "Duration"
-        }
-    ],
-    "objects": {
-        "graphSettings": {
-            "displayName": "Graphsettings",
-            "properties": {
-                "relationShipPercentageThreshold": {
-                    "displayName": "Relationship % threshold",
-                    "description": "The minimum occurrence percentage a relationship must have in order to be displayed",
-                    "type": {
-                        "numeric": true
-                    }
-                }
-            }
-        }
+  "dataRoles": [
+    {
+      "name": "id",
+      "kind": "GroupingOrMeasure",
+      "displayName": "ID"
     },
-    "dataViewMappings": [
-        {
-            "table": {
-                "rows": {
-                    "select": [
-                        {
-                            "for": {
-                                "in": "id"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "caseId"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "fromActivity"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "toActivity"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "isHappyPath"
-                            }
-                        },
-                        {
-                            "for": {
-                                "in": "duration"
-                            }
-                        }
-                    ],
-                    "dataReductionAlgorithm": {
-                        "top": {
-                            "count": 30000
-                        }
-                    }
-                }
-            }
+    {
+      "name": "caseId",
+      "kind": "GroupingOrMeasure",
+      "displayName": "CaseID"
+    },
+    {
+      "name": "fromActivity",
+      "kind": "GroupingOrMeasure",
+      "displayName": "From Activity"
+    },
+    {
+      "name": "toActivity",
+      "kind": "GroupingOrMeasure",
+      "displayName": "To Activity"
+    },
+    {
+      "name": "isHappyPath",
+      "kind": "GroupingOrMeasure",
+      "displayName": "Is Happy Path"
+    },
+    {
+      "name": "duration",
+      "kind": "GroupingOrMeasure",
+      "displayName": "Duration"
+    }
+  ],
+  "objects": {
+    "graphSettings": {
+      "displayName": "Graphsettings",
+      "properties": {
+        "relationShipPercentageThreshold": {
+          "displayName": "Relationship % threshold",
+          "description": "The minimum occurrence percentage a relationship must have in order to be displayed",
+          "type": {
+            "numeric": true
+          }
         }
-    ]
+      }
+    }
+  },
+  "dataViewMappings": [
+    {
+      "table": {
+        "rows": {
+          "select": [
+            {
+              "for": {
+                "in": "id"
+              }
+            },
+            {
+              "for": {
+                "in": "caseId"
+              }
+            },
+            {
+              "for": {
+                "in": "fromActivity"
+              }
+            },
+            {
+              "for": {
+                "in": "toActivity"
+              }
+            },
+            {
+              "for": {
+                "in": "isHappyPath"
+              }
+            },
+            {
+              "for": {
+                "in": "duration"
+              }
+            }
+          ],
+          "dataReductionAlgorithm": {
+            "window": {
+              "count": 30000
+            }
+          }
+        }
+      }
+    }
+  ]
 }
