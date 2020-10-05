@@ -149,7 +149,7 @@ export class Visual implements IVisual {
       // ihp = row[4].toString().toLowerCase() === "yes";
       ihp = row[4];
       duration = +row[5];
-      let key = from + "->" + to;
+      let key = from + "," + to;
       if (ihp) {
         happyPath.push(key);
       }
